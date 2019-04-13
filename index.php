@@ -49,8 +49,15 @@ function deleteFile($filePath) {
 }
 
 function getUploadedFiles() {
+  $search = trim($_GET['search']);
+  if (empty($search)) {
+    $search = '*';
+  } else {
+    $search = '*'.basename($search).'*';
+  }
+
   $files = array(); // path : { name : basename, size : filesize }
-  foreach (glob(UPLOAD_DIR.'/*') as $file) {
+  foreach (glob(UPLOAD_DIR."/${search}") as $file) {
     $info = array(
       'name' => str_replace(UPLOAD_DIR . '/', '', $file),
       'size' => filesize($file),
@@ -98,13 +105,11 @@ h1 a:hover { text-decoration: underline;}
 h1 a:link { color: #000; }
 h1 a:visited { color: #000; }
 
-input {
-  color: #fff;
-  padding: 8px;
-  border: double 4px #fff;
-}
-input[type='file'] { background-color: #06d; }
-input[type='submit'] { background-color: #060; }
+.upload input { color: #fff; }
+.upload input { padding: 8px; border: double 4px #fff; }
+.upload input[type='file'] { background-color: #06d; }
+.upload input[type='submit'] { background-color: #060; }
+.uploaded-info input[type='submit'] { color: #eee; background-color: #d00; }
 
 table {
   font-size: 0.8em;
@@ -135,7 +140,10 @@ span.notice { font-size: 0.8em; color: #0a0; }
   white-space: nowrap;
 }
 
-.uploaded-count { font-size: 0.8em; }
+.uploaded-info   { padding: 8px 2% 24px 8px; }
+.uploaded-count  { float:left; }
+.uploaded-search { float:right; }
+.uploaded-files  { margin: 8px; }
 
 </style>
 
@@ -176,19 +184,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 </div>
 
-<div class='uploaded-files'>
 <?php $uploadedFiles = getUploadedFiles(); ?>
-  <div class="uploaded-count"><?php echo count($uploadedFiles) ?>件アップロードされています。</div>
+<div class="uploaded-info">
+  <div class="uploaded-count"><?php echo count($uploadedFiles) ?>件のアップロード</div>
+  <div class="uploaded-search">
+    <form action='index.php' method='get' enctype='multipart/form-data'>
+      <input type="text" name="search" size="40%" maxlength="128">
+      <input type='submit' value='検索' />
+    </form>
+  </div>
+</div>
+
+<div class='uploaded-files'>
   <table>
     <tr><th>ファイル名</th><th>サイズ</th><th>ダウンロード</th><th>削除</th></tr>
-<?php foreach ($uploadedFiles as $path => $info) : ?>
+    <?php foreach ($uploadedFiles as $path => $info) : ?>
     <tr>
       <td><a             href="<?php echo  htmlspecialchars($path) ?>"><?php echo htmlspecialchars($info['name']) ?></a></td>
       <td><?php echo round($info['size'] / TO_MiB, 2) ?> MiB</td>
       <td class="tac"><a href="<?php echo  htmlspecialchars($path) ?>" download="<?php echo $path ?>">[↓]</a></td>
       <td class="tac"><a href="<?php echo  "./?", http_build_query(array('delete' => htmlspecialchars($path))) ?>">[x]</a></td>
     </tr>
-<?php endforeach; unset($path, $info) ?>
+    <?php endforeach; unset($path, $info) ?>
   </table>
 </div>
 

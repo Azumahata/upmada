@@ -105,11 +105,29 @@ h1 a:hover { text-decoration: underline;}
 h1 a:link { color: #000; }
 h1 a:visited { color: #000; }
 
+.upload { width:384px; float:left; }
 .upload input { color: #fff; }
 .upload input { padding: 8px; border: double 4px #fff; }
 .upload input[type='file'] { background-color: #06d; }
 .upload input[type='submit'] { background-color: #060; }
 .uploaded-info input[type='submit'] { color: #eee; background-color: #d00; }
+
+.system-info { width:128px; display:inline-block; }
+.system-info .disk-total {
+  width: 21em;
+  background-color: #000;
+  border-style: ridge;
+}
+.system-info .disk-used  {
+  width: <?php echo $SYSTEM_INFO['disk_used_per'] ?>%;
+  color: #FFF;
+  background-color: #e55;
+  white-space: nowrap;
+}
+
+.description { font-size: 0.4em; clear:both; }
+span.error  { font-size: 0.8em; color: #e00; }
+span.notice { font-size: 0.8em; color: #0a0; }
 
 table {
   font-size: 0.8em;
@@ -123,24 +141,7 @@ table td, th {
 }
 table tr:nth-child(odd) { background-color: #eee }
 
-.description { font-size: 0.4em; }
-span.error  { font-size: 0.8em; color: #e00; }
-span.notice { font-size: 0.8em; color: #0a0; }
-
-.system-info { margin: 8px; }
-.system-info .disk-total {
-  width: 21em;
-  background-color: #000;
-  border-style: ridge;
-}
-.system-info .disk-used  {
-  width: <?php echo $SYSTEM_INFO['disk_used_per'] ?>%;
-  color: #FFF;
-  background-color: #e55;
-  white-space: nowrap;
-}
-
-.uploaded-info   { padding: 8px 2% 24px 8px; }
+.uploaded-info   { padding: 8px 2% 24px 8px; clear:both; }
 .uploaded-count  { float:left; }
 .uploaded-search { float:right; }
 .uploaded-files  { margin: 8px; }
@@ -155,6 +156,12 @@ span.notice { font-size: 0.8em; color: #0a0; }
 <div class='header'>
   <h1><a href="./"><?php echo TITLE ?></a></h1>
 </div>
+<div class='upload'>
+  <form action='index.php' method='post' enctype='multipart/form-data'>
+    <input type='file' name='upload_file' />
+    <input type='submit' value='アップロード' />
+  </form>
+</div>
 <div class='system-info'>
   <div class='disk-total'><div class='disk-used'>
     <?php echo sprintf("&nbsp;Disk: %s%% (%sGiB / %sGiB)", 
@@ -164,14 +171,8 @@ span.notice { font-size: 0.8em; color: #0a0; }
     ); ?>
   </div></div>
 </div>
-<div class='upload'>
-  <form action='index.php' method='post' enctype='multipart/form-data'>
-    <input type='file' name='upload_file' />
-    <input type='submit' value='アップロード' />
-  </form>
-  <div class='description'>
-    <?php echo implode(",&nbsp", array_map(function($k, $v)  {return "$k:$v";}, array_keys($PHP_INI_SETTINGS), $PHP_INI_SETTINGS)) ?>
-  </div>
+<div class='description'>
+  <?php echo implode(",&nbsp", array_map(function($k, $v)  {return "$k:$v";}, array_keys($PHP_INI_SETTINGS), $PHP_INI_SETTINGS)) ?>
 </div>
 
 <div class='result-message'>

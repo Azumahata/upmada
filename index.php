@@ -80,7 +80,9 @@ function getUploadedFiles() {
 
 h1 {
   position: relative;
+  white-space: nowrap;
   padding-left: 12px;
+  -webkit-animation: slideIn 1s ease-out;
 }
 h1:before {
   position: absolute;
@@ -92,6 +94,7 @@ h1:before {
   border: none;
   border-left: solid 15px transparent;
   border-bottom: solid 15px rgb(230, 90, 90);
+  -webkit-animation: slideIn 1s ease-out;
 }
 h1:after {
   content: "";
@@ -99,11 +102,17 @@ h1:after {
   height: 2px;
   background: -webkit-linear-gradient(to right, rgb(230, 90, 90), transparent);
   background: linear-gradient(to right, rgb(230, 90, 90), transparent);
+  -webkit-animation: slideIn 1s ease-out;
 }
 h1 a { text-decoration: none;}
 h1 a:hover { text-decoration: underline;}
 h1 a:link { color: #000; }
 h1 a:visited { color: #000; }
+
+@-webkit-keyframes slideIn {
+  0%   { padding-left:100%; }
+  100% { padding-left:0%; }
+}
 
 .upload { width:384px; float:left; }
 .upload input { color: #fff; }

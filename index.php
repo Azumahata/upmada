@@ -88,7 +88,7 @@ function getUploadedFiles() {
   </form>
 </div>
 <div class='system-info'>
-  <div class='disk-total'><div class='disk-used'>
+  <div class='disk-total'><div class='disk-used' style="width: <?php echo $SYSTEM_INFO['disk_used_per'] ?>%">
     <?php echo sprintf("&nbsp;Disk: %s%% (%sGiB / %sGiB)", 
       round($SYSTEM_INFO['disk_used_per'], 2),
       round($SYSTEM_INFO['disk_used'] / TO_GiB, 2),

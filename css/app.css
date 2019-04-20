@@ -50,7 +50,6 @@ h1 a:visited { color: #000; }
   border-style: ridge;
 }
 .system-info .disk-used  {
-  width: <?php echo $SYSTEM_INFO['disk_used_per'] ?>%;
   color: #FFF;
   background-color: #e55;
   white-space: nowrap;

@@ -35,7 +35,7 @@ function upload() {
   return sprintf('<span class="notice">成功: アップロードが正常に完了しました。(%s)</span>', $uploadFileName);
 }
 
-function deleteFile($filePath) {
+function deleteFile($filePath=null) {
   if (is_null($_GET["delete"])) return;
   $deleteFileName = basename($_GET["delete"]);
   $deletePath =  sprintf('%s/%s', UPLOAD_DIR , $deleteFileName);

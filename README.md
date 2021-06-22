@@ -7,7 +7,7 @@
   * It is created in a single file and does not require a database.
 
 ## Demo
-![Sample](https://github.com/Azumahata/upmada/blob/master/files/demo.png "Sample")
+![Sample](https://github.com/Azumahata/upmada/blob/master/src/files/demo.png "Sample")
 
 ## Requirement
 ```

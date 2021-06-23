@@ -36,14 +36,15 @@ h1 a:visited { color: #000; }
   100% { padding-left:0%; }
 }
 
-.upload { width:384px; float:left; }
+.upload { width:50%; float:left; }
+.upload form[type='submit'] { display: inline; }
 .upload input { color: #fff; }
 .upload input { padding: 8px; border: double 4px #fff; }
-.upload input[type='file'] { background-color: #06d; }
-.upload input[type='submit'] { background-color: #060; }
+.upload input[type='file'] { width:70%; background-color: #06d; }
+.upload input[type='submit'] { width:22%; padding:0.8em; background-color: #060; }
 .uploaded-info input[type='submit'] { color: #eee; background-color: #d00; }
 
-.system-info { width:128px; display:inline-block; }
+.system-info { width:40%; display:inline-block; }
 .system-info .disk-total {
   width: 21em;
   background-color: #000;
@@ -56,6 +57,9 @@ h1 a:visited { color: #000; }
 }
 
 .description { font-size: 0.4em; clear:both; }
+.description span { padding:0.2em; }
+.description span:before { content:"- "; }
+
 span.error  { font-size: 0.8em; color: #e00; }
 span.notice { font-size: 0.8em; color: #0a0; }
 
@@ -75,4 +79,3 @@ table tr:nth-child(odd) { background-color: #eee }
 .uploaded-count  { float:left; }
 .uploaded-search { float:right; }
 .uploaded-files  { margin: 8px; }
-

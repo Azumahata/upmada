@@ -1,14 +1,17 @@
 <?php
+declare(strict_types=1);
+// ini_set('display_errors', "On");
+// error_reporting(E_ALL);
+
 class Info {
   const title     = 'うｐﾏﾀﾞｧ?(・∀・ )っ/凵⌒☆ﾁﾝﾁﾝ';
-  const uploadDir = './files';
   private $memoryLimit;
   private $postMaxSize;
   private $uploadMaxFilesize;
 
   static private $instance;
   static public function getInstance() {
-    if (is_null($instance))
+    if (is_null(self::$instance))
       self::$instance = new Info();
     return self::$instance;
   }
@@ -38,82 +41,155 @@ class Disk {
   static private $diskUsed;
   static private $diskUsedPer;
 
-  static public function info() {
-    return sprintf("Disk: %s%% (%sGiB / %sGiB)",
+  static public function info() : string {
+    return sprintf('Disk: %s%% (%sGiB / %sGiB)',
       round(self::diskUsedPer(), 2),
       self::toGiB(self::diskUsed()),
       self::toGiB(self::diskTotal())
     );
   }
 
-  static public function toMiB(int $size) { return round($size / self::TO_MiB, 2); }
-  static public function toGiB(int $size) { return round($size / self::TO_GiB, 2); }
+  static public function toMiB(float $size) : float { return round($size / self::TO_MiB, 2); }
+  static public function toGiB(float $size) : float { return round($size / self::TO_GiB, 2); }
 
-  static public function diskTotal() {
+  static public function diskTotal() : float {
     return self::$diskTotal ??= disk_total_space(self::diskPath);
   }
 
-  static public function diskFree() {
+  static public function diskFree() : float {
     return self::$diskFree ??= disk_free_space(self::diskPath);
   }
 
-  static public function diskUsed() {
+  static public function diskUsed() : float {
     return self::$diskUsed ??= self::diskTotal() - self::diskFree();
   }
-  static public function diskUsedPer() {
+  static public function diskUsedPer() : float {
     return self::$diskUsedPer ??= self::diskUsed() / self::diskTotal() * 100;
   }
 }
 
+class Upmada {
+  private const uploadDir  = './files';
+  private $search  = '';
+  private $files   = [];
+  private $errors  = [];
+  private $notices = [];
 
-function upload() {
-  $uploadedFile = $_FILES['upload_file'];
-  if (!is_uploaded_file($uploadedFile['tmp_name']) || $uploadedFile['error'] !== 0) {
-    return '<span class="error">失敗: 有効なファイルではないか、サイズが大きすぎます。</span>';
+  public function searchQuery() : string {
+    return $search ??= isset($_GET['search']) ? trim($_GET['search']) : '';
   }
 
-  $uploadFileName = sprintf('%s_%s', date('YmdHis'), basename($uploadedFile['name']));
-  $uploadPath     = sprintf('%s/%s', Info::uploadDir , $uploadFileName);
-  if (!move_uploaded_file($uploadedFile['tmp_name'], $uploadPath)) {
-    return '<span class="error">失敗: ファイルの作成に失敗しました。</span>';
+  public function files() : array {
+    if ($this->files) return $this->files;
+
+    $pattern = empty($this->searchQuery()) ? '*' : '*'.basename($this->searchQuery()).'*';
+    $this->files = array_map(function($f) {
+      return [
+        'path' => $f,
+        'name' => str_replace(self::uploadDir . '/', '', $f),
+        'size' => filesize($f),
+      ];
+    }, glob(self::uploadDir . '/' . $pattern));
+
+    usort($this->files, function($a, $b) {
+      return strcmp($b['path'], $a['path']);
+    });
+
+    return $this->files;
   }
 
-  return sprintf('<span class="notice">成功: アップロードが正常に完了しました。(%s)</span>', $uploadFileName);
+  public function dispatch() : Closure {
+    $requestMethod = strtolower($_SERVER['REQUEST_METHOD']);
+
+    $callMethod = 'get';
+    try {
+      if ($requestMethod === 'get') {
+        $callMethod = 'get';
+      } elseif ($requestMethod === 'post') {
+        $extraMethod = isset($_REQUEST['_method']) ? $_REQUEST['_method'] : null;
+        if (is_null($extraMethod)) {
+          $callMethod = 'post';
+        } elseif ($extraMethod === 'DELETE') {
+          $callMethod = 'delete';
+        } else {
+          throw new BadMethodCallException();
+        }
+      } else {
+        throw new BadMethodCallException();
+      }
+    } catch (BadMethodCallException $e) {
+      $this->setError('無効なリクエストです。');
+    }
+
+    return function() use ($callMethod) {
+      $this->{$callMethod}();
+    };
+  }
+
+  private function get() : bool {
+    // do nothing
+    return true;
+  }
+
+  private function post() : bool {
+    $uploadedFile = isset($_FILES['upload_file'])    ? $_FILES['upload_file']    : '';
+    $tmpName      = isset($uploadedFile['tmp_name']) ? $uploadedFile['tmp_name'] : '';
+
+    if (!is_uploaded_file($tmpName) || $uploadedFile['error'] !== 0) {
+      $this->setError('有効なファイルではないか、サイズが大きすぎます。');
+      return false;
+    }
+
+    $uploaded = sprintf('%s_%s', date('YmdHis'), basename($uploadedFile['name']));
+    $uploadedPath = sprintf('%s/%s', Upmada::uploadDir , $uploaded);
+    if (!move_uploaded_file($uploadedFile['tmp_name'], $uploadedPath )) {
+      $this->setError('ファイルの作成に失敗しました。');
+      return false;
+    }
+
+    $this->setNotice(sprintf('アップロードが正常に完了しました。(%s)', $uploaded));
+    return true;
+  }
+
+  private function delete() : bool {
+    $uploadedPath = $_REQUEST['path'];
+    if (is_null($uploadedPath)) return false;
+
+    $deleteFile = basename($uploadedPath);
+    $deletePath =  sprintf('%s/%s', Upmada::uploadDir , $deleteFile);
+
+    if (!file_exists($deletePath)) {
+      $this->setError('削除するファイルが存在しません。');
+      return false;
+    }
+    if (!unlink($deletePath)) {
+      $this->setError('削除できませんでした。');
+      return false;
+    }
+
+    $this->setNotice(sprintf('削除が正常に完了しました(%s)', $deleteFile));
+    return true;
+  }
+
+  private function setNotice(string $_message) : void {
+    $this->notices[] = $_message;
+  }
+
+  private function setError(string $_message) : void {
+    $this->errors[] = $_message;
+  }
+
+  public function getNotices() : array {
+    return $this->notices;
+  }
+
+  public function getErrors() : array {
+    return $this->errors;
+  }
 }
 
-function deleteFile($filePath=null) {
-  if (is_null($_GET["delete"])) return;
-  $deleteFileName = basename($_GET["delete"]);
-  $deletePath =  sprintf('%s/%s', Info::uploadDir , $deleteFileName);
-  if (!file_exists($deletePath)) {
-    return '<span class="error">失敗: 削除するファイルが存在しません。</span>';
-  }
-  if (!unlink($deletePath)) {
-    return '<span class="error">失敗: 削除できませんでした。</span>';
-  }
-  return sprintf('<span class="notice">成功: 削除が正常に完了しました(%s)</span>', $deleteFileName);
-}
-
-function getUploadedFiles() {
-  $search = trim($_GET['search']);
-  if (empty($search)) {
-    $search = '*';
-  } else {
-    $search = '*'.basename($search).'*';
-  }
-
-  $files = array(); // path : { name : basename, size : filesize }
-  foreach (glob(Info::uploadDir."/${search}") as $file) {
-    $info = array(
-      'name' => str_replace(Info::uploadDir . '/', '', $file),
-      'size' => filesize($file),
-    );
-    $files[$file] = $info;
-  } unset($file);
-  krsort($files);
-
-  return $files;
-}
+$upmada = new Upmada();
+$upmada->dispatch()();
 
 ?>
 <!DOCTYPE html>
@@ -125,17 +201,17 @@ function getUploadedFiles() {
 </head>
 <body>
 <div class='header'>
-  <h1><a href="./"><?php echo Info::title ?></a></h1>
+  <h1><a href='./'><?php echo Info::title ?></a></h1>
 </div>
 <div class='upload'>
-  <form action='index.php' method='post' enctype='multipart/form-data'>
+  <form action='/' method='post' enctype='multipart/form-data'>
     <input type='file' name='upload_file' />
     <input type='submit' value='アップロード' />
   </form>
 </div>
 <div class='system-info'>
   <div class='disk-total'>
-    <div class='disk-used' style="width: <?php echo Disk::diskUsedPer() ?>%">
+    <div class='disk-used' style='width: <?php echo Disk::diskUsedPer() ?>%'>
       &nbsp;<?php echo Disk::info() ?>
     </div>
   </div>
@@ -147,21 +223,19 @@ function getUploadedFiles() {
 </div>
 
 <div class='result-message'>
-<?php
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  echo upload();
-} else {
-  echo deleteFile();
-}
-?>
+<?php foreach ($upmada->getNotices() as $notice) : ?>
+  <span class='notice'><?php echo $notice ?></span>
+<?php endforeach; unset($notice) ?>
+<?php foreach ($upmada->getErrors() as $error) : ?>
+  <span class='error'><?php echo $error ?></span>
+<?php endforeach; unset($error) ?>
 </div>
 
-<?php $uploadedFiles = getUploadedFiles(); ?>
-<div class="uploaded-info">
-  <div class="uploaded-count"><?php echo count($uploadedFiles) ?>件のアップロード</div>
-  <div class="uploaded-search">
-    <form action='index.php' method='get' enctype='multipart/form-data'>
-      <input type="text" name="search" size="40%" maxlength="128">
+<div class='uploaded-info'>
+  <div class='uploaded-count'><?php echo count($upmada->files()) ?>件のアップロード</div>
+  <div class='uploaded-search'>
+    <form action='/' method='get' enctype='multipart/form-data'>
+    <input type='text' name='search' size='40%' maxlength='128' value='<?php echo htmlspecialchars($upmada->searchQuery()) ?>'>
       <input type='submit' value='検索' />
     </form>
   </div>
@@ -170,14 +244,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class='uploaded-files'>
   <table>
     <tr><th>ファイル名</th><th>サイズ</th><th>ダウンロード</th><th>削除</th></tr>
-    <?php foreach ($uploadedFiles as $path => $info) : ?>
+    <?php foreach ($upmada->files() as $f) : ?>
     <tr>
-      <td><a             href="<?php echo  htmlspecialchars($path) ?>"><?php echo htmlspecialchars($info['name']) ?></a></td>
-      <td><?php echo Disk::toMiB($info['size']) ?> MiB</td>
-      <td class="tac"><a href="<?php echo  htmlspecialchars($path) ?>" download="<?php echo $path ?>">[↓]</a></td>
-      <td class="tac"><a href="<?php echo  "./?", http_build_query(array('delete' => htmlspecialchars($path))) ?>">[x]</a></td>
+      <td><a href='<?php echo  htmlspecialchars($f['path']) ?>'><?php echo htmlspecialchars($f['name']) ?></a></td>
+      <td><?php echo Disk::toMiB($f['size']) ?> MiB</td>
+      <td class='tac'><a href='<?php echo  htmlspecialchars($f['path']) ?>' download='<?php echo $f['path'] ?>'>[↓]</a></td>
+      <td class='tac'>
+        <form method='post' action='/'>
+          <input type='hidden' name='_method' value='DELETE' />
+          <input type='hidden' name='search'  value='<?php echo $upmada->searchQuery() ?>' />
+          <input type='hidden' name='path'    value='<?php echo htmlspecialchars($f['path']) ?>' />
+          <input type='submit' value='x'>
+        </form>
+      </td>
     </tr>
-    <?php endforeach; unset($path, $info) ?>
+    <?php endforeach; unset($path, $f) ?>
   </table>
 </div>
 

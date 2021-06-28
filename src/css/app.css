@@ -42,7 +42,8 @@ h1 a:visited { color: #000; }
 .upload input { padding: 8px; border: double 4px #fff; }
 .upload input[type='file'] { width:70%; background-color: #06d; }
 .upload input[type='submit'] { width:22%; padding:0.8em; background-color: #060; }
-.uploaded-info input[type='submit'] { color: #eee; background-color: #d00; }
+.uploaded-info input[type='submit'] { color: #eee; background-color: #fa0; }
+.uploaded-files input[type='submit'] { color: #eee; background-color: #d00; }
 
 .system-info { width:40%; display:inline-block; }
 .system-info .disk-total {
